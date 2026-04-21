@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情绪日历</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button id="prevMonth">&lt;</button>
+            <h1 id="monthYear"></h1>
+            <button id="nextMonth">&gt;</button>
+        </div>
+        <div class="weekdays">
+            <div>日</div>
+            <div>一</div>
+            <div>二</div>
+            <div>三</div>
+            <div>四</div>
+            <div>五</div>
+            <div>六</div>
+        </div>
+        <div class="calendar" id="calendar"></div>
+        <div class="mood-legend">
+            <span class="mood-item"><span class="mood-icon">😊</span> 开心</span>
+            <span class="mood-item"><span class="mood-icon">😐</span> 普通</span>
+            <span class="mood-item"><span class="mood-icon">😢</span> 难过</span>
+        </div>
+    </div>
+
+    <div class="modal" id="moodModal">
+        <div class="modal-content">
+            <p>选择今天的心情</p>
+            <div class="mood-buttons">
+                <button class="mood-btn" data-mood="happy">😊</button>
+                <button class="mood-btn" data-mood="normal">😐</button>
+                <button class="mood-btn" data-mood="sad">😢</button>
+            </div>
+            <button class="cancel-btn" id="cancelMood">取消</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
