@@ -131,7 +131,8 @@ document.getElementById('submitMood').addEventListener('click', async () => {
         renderCalendar();
 
     } catch (error) {
-        document.getElementById('moodResult').textContent = '分析失败，请重试';
+        document.getElementById('moodResult').textContent = '错误'+ error.message;
+        console.log(error);
     }
 });
 
