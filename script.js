@@ -108,7 +108,7 @@ document.getElementById('submitMood').addEventListener('click', async () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer sk-1fb15f3f3f0e447883b1894288fb1ff9'  // 替换这里
+                'Authorization': 'Bearersk-1fb15f3f3f0e447883b1894288fb1ff9'  // 替换这里
             },
             body: JSON.stringify({
                 model: 'deepseek-chat',
