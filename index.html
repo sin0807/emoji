@@ -32,15 +32,13 @@
 
     <div class="modal" id="moodModal">
         <div class="modal-content">
-            <p>选择今天的心情</p>
-            <div class="mood-buttons">
-                <button class="mood-btn" data-mood="happy">😊</button>
-                <button class="mood-btn" data-mood="normal">😐</button>
-                <button class="mood-btn" data-mood="sad">😢</button>
-            </div>
-            <button class="cancel-btn" id="cancelMood">取消</button>
-        </div>
+            <p>选择今天的心情？</p>
+          <textarea id="moodInput" placeholder="用一句话描述今天的心情..." rows="3" style="width:100%;margin:10px 0;padding:8px;border-radius:8px;border:1px solid #ddd;"></textarea>
+        <button id="submitMood" style="margin-right:8px;">让AI分析 ✨</button>
+        <button class="cancel-btn" id="cancelMood">取消</button>
+        <p id="moodResult" style="margin-top:8px;color:#888;"></p>
     </div>
+</div>
 
     <script src="script.js"></script>
 </body>
