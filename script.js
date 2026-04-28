@@ -80,16 +80,7 @@ function closeMoodModal() {
     moodModal.classList.remove('active');
 }
 
-document.querySelectorAll('.mood-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const mood = btn.dataset.mood;
-        const moodData = loadMoodData();
-        moodData[selectedDate] = mood;
-        saveMoodData(moodData);
-        closeMoodModal();
-        renderCalendar();
-    });
-});
+
 
 cancelMood.addEventListener('click', closeMoodModal);
 
@@ -105,6 +96,43 @@ prevBtn.addEventListener('click', () => {
 nextBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     renderCalendar();
+});
+document.getElementById('submitMood').addEventListener('click', async () => {
+    const text = document.getElementById('moodInput').value.trim();
+    if (!text) return;
+
+    document.getElementById('moodResult').textContent = 'AI分析中...✨';
+
+    try {
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer 你的API_KEY'  // 替换这里
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat',
+                max_tokens: 10,
+                messages: [{
+                    role: 'user',
+                    content: `根据这句话判断情绪，只回复happy、normal或sad三个词之一，不要回复其他任何内容：${text}`
+                }]
+            })
+        });
+
+        const data = await response.json();
+        const mood = data.choices[0].message.content.trim().toLowerCase();
+
+        const moodData = loadMoodData();
+        moodData[selectedDate] = mood;
+        saveMoodData(moodData);
+
+        closeMoodModal();
+        renderCalendar();
+
+    } catch (error) {
+        document.getElementById('moodResult').textContent = '分析失败，请重试';
+    }
 });
 
 renderCalendar();
