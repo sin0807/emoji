@@ -78,9 +78,78 @@ function openMoodModal(dateKey) {
 function closeMoodModal() {
     selectedDate = null;
     moodModal.classList.remove('active');
+    const aiInput = document.getElementById('aiMoodInput');
+    const aiResult = document.getElementById('aiMoodResult');
+    const aiBtn = document.getElementById('aiAnalyzeBtn');
+    if (aiInput) aiInput.value = '';
+    if (aiResult) aiResult.textContent = '';
+    if (aiBtn) aiBtn.disabled = false;
 }
 
+// ===== 新增：AI 分析情绪 =====
+async function analyzeMoodByAI(text) {
+    const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+    });
+    const data = await response.json();
+    return data.mood;
+}
 
+document.querySelectorAll('.mood-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const mood = btn.dataset.mood;
+        const aiInput = document.getElementById('aiMoodInput');
+        const aiResult = document.getElementById('aiMoodResult');
+        const aiBtn = document.getElementById('aiAnalyzeBtn');
+
+        // 如果点了 AI 分析后的情绪按钮
+        if (aiInput && aiInput.value.trim() && aiResult.textContent) {
+            const moodData = loadMoodData();
+            moodData[selectedDate] = aiResult.textContent;
+            saveMoodData(moodData);
+            closeMoodModal();
+            renderCalendar();
+            return;
+        }
+
+        // 普通手动选择
+        const moodData = loadMoodData();
+        moodData[selectedDate] = mood;
+        saveMoodData(moodData);
+        closeMoodModal();
+        renderCalendar();
+    });
+});
+
+// AI 分析按钮事件
+document.addEventListener('click', async (e) => {
+    if (e.target && e.target.id === 'aiAnalyzeBtn') {
+        const aiInput = document.getElementById('aiMoodInput');
+        const aiResult = document.getElementById('aiMoodResult');
+        const aiBtn = document.getElementById('aiAnalyzeBtn');
+        const text = aiInput.value.trim();
+        
+        if (!text) {
+            alert('请输入想说的话');
+            return;
+        }
+        
+        aiBtn.disabled = true;
+        aiResult.textContent = '分析中...';
+        
+        try {
+            const mood = await analyzeMoodByAI(text);
+            aiResult.textContent = mood;
+        } catch (err) {
+            aiResult.textContent = 'error';
+            alert('分析失败，请重试');
+        } finally {
+            aiBtn.disabled = false;
+        }
+    }
+});
 
 cancelMood.addEventListener('click', closeMoodModal);
 
@@ -96,44 +165,6 @@ prevBtn.addEventListener('click', () => {
 nextBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     renderCalendar();
-});
-document.getElementById('submitMood').addEventListener('click', async () => {
-    const text = document.getElementById('moodInput').value.trim();
-    if (!text) return;
-
-    document.getElementById('moodResult').textContent = 'AI分析中...✨';
-
-    try {
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer sk-1fb15f3f3f0e447883b1894288fb1ff9'  // 替换这里
-            },
-            body: JSON.stringify({
-                model: 'deepseek-chat',
-                max_tokens: 10,
-                messages: [{
-                    role: 'user',
-                    content: `根据这句话判断情绪，只回复happy、normal或sad三个词之一，不要回复其他任何内容：${text}`
-                }]
-            })
-        });
-
-        const data = await response.json();
-        const mood = data.choices[0].message.content.trim().toLowerCase();
-
-        const moodData = loadMoodData();
-        moodData[selectedDate] = mood;
-        saveMoodData(moodData);
-
-        closeMoodModal();
-        renderCalendar();
-
-    } catch (error) {
-        document.getElementById('moodResult').textContent = '错误'+ error.message;
-        console.log(error);
-    }
 });
 
 renderCalendar();
