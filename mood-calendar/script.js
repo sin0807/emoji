@@ -7,6 +7,7 @@ const cancelMood = document.getElementById('cancelMood');
 const analyzeMoodBtn = document.getElementById('analyzeMoodBtn');
 const moodTextInput = document.getElementById('moodTextInput');
 const moodResult = document.getElementById('moodResult');
+const aiReply = document.getElementById('aiReply');
 
 let currentDate = new Date();
 let selectedDate = null;
@@ -78,6 +79,7 @@ function openMoodModal(dateKey) {
     moodModal.classList.add('active');
     moodTextInput.value = '';
     moodResult.textContent = '';
+    aiReply.textContent = '';
 }
 
 function closeMoodModal() {
@@ -96,19 +98,28 @@ analyzeMoodBtn.addEventListener('click', async () => {
     analyzeMoodBtn.disabled = true;
     analyzeMoodBtn.textContent = '分析中...';
     moodResult.textContent = '';
+    aiReply.textContent = '';
 
     try {
-        const response = await fetch('https://famous-torrone-d909fb.netlify.app/.netlify/functions/analyze', {
+        const response = await fetch('/.netlify/functions/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text })
         });
 
         const data = await response.json();
-        const mood = data.mood;
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        const { mood, reply } = data;
 
         if (mood && moodIcons[mood]) {
             moodResult.textContent = moodIcons[mood];
+            if (reply) {
+                aiReply.textContent = reply;
+            }
 
             const moodData = loadMoodData();
             moodData[selectedDate] = mood;
@@ -117,9 +128,9 @@ analyzeMoodBtn.addEventListener('click', async () => {
             setTimeout(() => {
                 closeMoodModal();
                 renderCalendar();
-            }, 800);
+            }, 1500);
         } else {
-            throw new Error('无效的返回');
+            throw new Error('无效的情绪数据');
         }
     } catch (err) {
         alert('分析失败，请重试');
