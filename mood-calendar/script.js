@@ -1,3 +1,25 @@
+const guZhenRenQuotes = [
+    "既然选择了远方，便只顾风雨兼程。",
+    "天道酬勤，一分耕耘一分收获。",
+    "不要在该奋斗的年纪选择安逸。",
+    "你的潜力远超你的想象。",
+    "困难只是暂时的，熬过去就是光明。",
+    "每一次挫折都是成长的契机。",
+    "相信自己，你比想象中更强大。",
+    "路虽远行则将至，事虽难做则必成。",
+    "乾坤未定，你我皆是黑马。",
+    "逆水行舟，不进则退。坚持下去！",
+    "莫愁前路无知己，天下谁人不识君。",
+    "千磨万击还坚劲，任尔东西南北风。",
+    "长风破浪会有时，直挂云帆济沧海。",
+    "宝剑锋从磨砺出，梅花香自苦寒来。",
+    "有志者事竟成，破釜沉舟百二秦关终属楚。"
+];
+
+function getRandomQuote() {
+    return guZhenRenQuotes[Math.floor(Math.random() * guZhenRenQuotes.length)];
+}
+
 const calendar = document.getElementById('calendar');
 const monthYear = document.getElementById('monthYear');
 const prevBtn = document.getElementById('prevMonth');
@@ -80,6 +102,8 @@ function openMoodModal(dateKey) {
     moodTextInput.value = '';
     moodResult.textContent = '';
     aiReply.textContent = '';
+    analyzeMoodBtn.style.display = 'block';
+    cancelMood.style.display = 'block';
 }
 
 function closeMoodModal() {
@@ -113,28 +137,22 @@ analyzeMoodBtn.addEventListener('click', async () => {
             throw new Error(data.error);
         }
 
-        const { mood, reply } = data;
+        const mood = data.mood;
 
         if (mood && moodIcons[mood]) {
             moodResult.textContent = moodIcons[mood];
-            if (reply) {
-                aiReply.textContent = reply;
-            }
+            aiReply.textContent = getRandomQuote();
+            analyzeMoodBtn.style.display = 'none';
+            cancelMood.textContent = '点击任意处关闭';
 
             const moodData = loadMoodData();
             moodData[selectedDate] = mood;
             saveMoodData(moodData);
-
-            setTimeout(() => {
-                closeMoodModal();
-                renderCalendar();
-            }, 1500);
         } else {
             throw new Error('无效的情绪数据');
         }
     } catch (err) {
         alert('分析失败，请重试');
-    } finally {
         analyzeMoodBtn.disabled = false;
         analyzeMoodBtn.textContent = '🤖 让AI分析情绪';
     }
