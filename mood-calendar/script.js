@@ -33,9 +33,11 @@ const analyzeMoodBtn = document.getElementById('analyzeMoodBtn');
 const moodTextInput = document.getElementById('moodTextInput');
 const moodResult = document.getElementById('moodResult');
 const aiReply = document.getElementById('aiReply');
+const chartTitle = document.getElementById('chartTitle');
 
 let currentDate = new Date();
 let selectedDate = null;
+let moodChart = null;
 
 const moodIcons = {
     happy: '😊',
@@ -50,6 +52,56 @@ function loadMoodData() {
 
 function saveMoodData(data) {
     localStorage.setItem('moodData', JSON.stringify(data));
+}
+
+function getMonthStats() {
+    const moodData = loadMoodData();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    const counts = { happy: 0, normal: 0, sad: 0 };
+
+    for (const [key, mood] of Object.entries(moodData)) {
+        const [y, m] = key.split('-').map(Number);
+        if (y === year && m === month) {
+            if (counts[mood] !== undefined) counts[mood]++;
+        }
+    }
+    return counts;
+}
+
+function renderChart() {
+    const counts = getMonthStats();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    chartTitle.textContent = `${year}年${month}月情绪统计`;
+
+    const ctx = document.getElementById('moodChart').getContext('2d');
+
+    if (moodChart) {
+        moodChart.destroy();
+    }
+
+    moodChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['😊 开心', '😐 普通', '😢 难过'],
+            datasets: [{
+                data: [counts.happy, counts.normal, counts.sad],
+                backgroundColor: ['#4CAF50', '#FFC107', '#2196F3'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { size: 13 } }
+                }
+            }
+        }
+    });
 }
 
 function renderCalendar() {
@@ -151,6 +203,12 @@ analyzeMoodBtn.addEventListener('click', async () => {
             const moodData = loadMoodData();
             moodData[selectedDate] = mood;
             saveMoodData(moodData);
+
+            setTimeout(() => {
+                closeMoodModal();
+                renderCalendar();
+                renderChart();
+            }, 3000);
         } else {
             throw new Error('无效的情绪数据');
         }
@@ -170,11 +228,14 @@ moodModal.addEventListener('click', (e) => {
 prevBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
     renderCalendar();
+    renderChart();
 });
 
 nextBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     renderCalendar();
+    renderChart();
 });
 
 renderCalendar();
+renderChart();

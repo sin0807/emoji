@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>情绪日历</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -27,6 +28,10 @@
             <span class="mood-item"><span class="mood-icon">😊</span> 开心</span>
             <span class="mood-item"><span class="mood-icon">😐</span> 普通</span>
             <span class="mood-item"><span class="mood-icon">😢</span> 难过</span>
+        </div>
+        <div class="chart-section">
+            <h3 id="chartTitle"></h3>
+            <canvas id="moodChart"></canvas>
         </div>
     </div>
 

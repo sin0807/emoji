@@ -121,6 +121,23 @@ body {
     color: #666;
 }
 
+.chart-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.chart-section h3 {
+    text-align: center;
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+#moodChart {
+    max-height: 200px;
+}
+
 .modal {
     display: none;
     position: fixed;
