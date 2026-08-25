@@ -1,6 +1,11 @@
 [build]
   publish = "."
 
+# Explicit functions directory so Netlify always bundles the serverless function.
+[functions]
+  directory = "netlify/functions"
+
+
 # 统一 API 路径：前端只调 /api/analyze，
 # Netlify 在这里把它转发给真正的函数，这样前端在 Netlify / Vercel 上都不用改。
 # 注意：这条规则必须写在 /* 之前，因为重写规则是“第一个匹配的生效”。
