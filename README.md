@@ -60,8 +60,9 @@ mood-calendar/
 │   └── analyze.js          # Vercel Serverless 函数（AI 代理）
 ├── netlify/
 │   └── functions/
-│       ├── analyze.js      # Netlify Serverless 函数（AI 代理）
-│       └── analyze.test.js # 单元测试（node --test）
+│       └── analyze.js      # Netlify Serverless 函数（AI 代理）
+├── tests/
+│   └── analyze.test.js     # 单元测试（node --test）
 ├── backend/
 │   └── main.py             # FastAPI 本地版后端
 ├── requirements.txt        # Python 依赖
@@ -107,7 +108,7 @@ uvicorn main:app --reload
 ### 4. 运行测试
 
 ```bash
-node --test netlify/functions/
+node --test tests/analyze.test.js
 ```
 
 ### 5. 部署到 Netlify

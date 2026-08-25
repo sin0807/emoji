@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { parseMoodResponse } = require('./analyze');
+const { parseMoodResponse } = require('../netlify/functions/analyze');
 
 test('解析标准 JSON', () => {
   const result = parseMoodResponse('{"mood":"happy","reply":"太棒了，继续保持！"}');
