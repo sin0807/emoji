@@ -1,0 +1,9 @@
+{
+  "name": "mood-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI 情绪日历：记录心情，AI 识别情绪并给出温暖回应",
+  "scripts": {
+    "test": "node --test tests/analyze.test.js"
+  }
+}

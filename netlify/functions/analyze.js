@@ -68,6 +68,19 @@ function checkRateLimit(ip) {
   return true;
 }
 
+// 简单的重试：上游 429（限流）或 5xx（服务器错误）时自动重试，
+// 等待时间逐次翻倍（500ms → 1000ms），避免瞬时故障直接报错。
+async function fetchWithRetry(url, options, maxRetries = 2) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt === maxRetries) {
+      return response;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
@@ -104,7 +117,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetchWithRetry('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -112,6 +125,7 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
+        response_format: { type: 'json_object' }, // 让模型保证输出合法 JSON
         temperature: 0, // 分类任务用低温，输出更稳定
         max_tokens: 120,
         messages: [

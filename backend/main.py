@@ -7,6 +7,7 @@
 启动后访问 http://127.0.0.1:8000/docs 可以看到自动生成的 API 文档。
 """
 
+import asyncio
 import json
 import os
 import re
@@ -89,6 +90,7 @@ async def analyze(request: MoodRequest):
         "model": MODEL_NAME,
         "temperature": 0,
         "max_tokens": 120,
+        "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f'用户说："{request.text}"'},
@@ -96,11 +98,18 @@ async def analyze(request: MoodRequest):
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(
-            DEEPSEEK_URL,
-            json=payload,
-            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-        )
+        # 上游 429（限流）或 5xx（服务器错误）时自动重试，最多 3 次，等待时间翻倍
+        response = None
+        for attempt in range(3):
+            response = await client.post(
+                DEEPSEEK_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+            )
+            retryable = response.status_code == 429 or response.status_code >= 500
+            if not retryable or attempt == 2:
+                break
+            await asyncio.sleep(0.5 * (2 ** attempt))
 
     if response.status_code != 200:
         # 同样不要把上游错误原文返回给用户

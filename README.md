@@ -4,6 +4,8 @@
 
 🌐 **在线体验**：https://famous-torrone-d909fb.netlify.app/
 
+[![Test](https://github.com/sin0807/emoji/actions/workflows/test.yml/badge.svg)](https://github.com/sin0807/emoji/actions/workflows/test.yml)
+
 ## 功能特点
 
 - 📅 **日历视图**：直观展示每日情绪状态，支持月份切换
@@ -30,6 +32,7 @@
 | Vercel | Serverless Function（`api/analyze.js`） |
 | 本地开发 | FastAPI（`backend/main.py`） |
 | AI 模型 | DeepSeek Chat API（`deepseek-chat`） |
+| 工程化 | GitHub Actions 自动测试（push 时跑 `npm test`） |
 
 ## 架构
 
@@ -50,10 +53,11 @@ DeepSeek Chat API
 ## 目录结构
 
 ```
-mood-calendar/
+.
 ├── index.html              # 主页
 ├── style.css               # 样式
 ├── script.js               # 核心逻辑（DOM、日历、图表、调用 API）
+├── package.json            # npm 脚本（npm test 跑测试）
 ├── netlify.toml            # Netlify 配置（含 /api/analyze 转发）
 ├── vercel.json             # Vercel 配置
 ├── api/
@@ -67,8 +71,16 @@ mood-calendar/
 │   └── main.py             # FastAPI 本地版后端
 ├── requirements.txt        # Python 依赖
 ├── .env.example            # 环境变量示例（复制为 .env）
-└── LICENSE
+├── LICENSE
+└── .github/
+    └── workflows/
+        └── test.yml        # GitHub Actions：push 自动跑测试
 ```
+
+## 效果预览
+
+<!-- 把线上页面截图保存为 screenshot.png 放在项目根目录，这里就会显示 -->
+![主界面](screenshot.png)
 
 ## 快速开始
 
@@ -108,8 +120,10 @@ uvicorn main:app --reload
 ### 4. 运行测试
 
 ```bash
-node --test tests/analyze.test.js
+npm test
 ```
+
+> 如果 PowerShell 提示"禁止运行脚本"，直接用 `node --test tests/analyze.test.js` 效果一样。
 
 ### 5. 部署到 Netlify
 
@@ -130,6 +144,7 @@ node --test tests/analyze.test.js
 - API Key 只存在于服务端环境变量，前端永远接触不到
 - 提示词注入防护：指令放在 system 消息，用户输入单独放在 user 消息
 - 输入长度限制（500 字）与基础频率限制，防止滥用消耗额度
+- 结构化输出：请求 DeepSeek 时启用 JSON 模式，让模型保证返回合法 JSON，并对瞬时上游错误自动重试
 - 上游模型报错只记录日志，不向前端泄露原始内容
 
 ## 适用场景
