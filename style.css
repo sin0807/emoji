@@ -167,29 +167,6 @@ body {
     color: #333;
 }
 
-.mood-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.mood-btn {
-    width: 60px;
-    height: 60px;
-    font-size: 2rem;
-    border: none;
-    border-radius: 15px;
-    background: #f5f5f5;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.mood-btn:hover {
-    transform: scale(1.1);
-    background: #eee;
-}
-
 .cancel-btn {
     background: transparent;
     color: #999;
@@ -200,4 +177,25 @@ body {
 
 .cancel-btn:hover {
     color: #666;
+}
+
+/* 弹窗里的输入框和按钮（原来写在 HTML 内联样式里，挪到这里更清晰） */
+#moodTextInput {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+#analyzeMoodBtn {
+    width: 100%;
+    padding: 10px;
+    background: #6c5ce7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
 }

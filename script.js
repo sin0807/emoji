@@ -38,6 +38,7 @@ const chartTitle = document.getElementById('chartTitle');
 let currentDate = new Date();
 let selectedDate = null;
 let moodChart = null;
+let closeTimer = null;
 
 const moodIcons = {
     happy: '😊',
@@ -45,9 +46,19 @@ const moodIcons = {
     sad: '😢'
 };
 
+// 前端只调用这一个路径；Netlify 和 Vercel 上它都指向各自的 AI 代理函数，
+// 这样前端代码在两个平台不用改任何东西。
+const API_URL = '/api/analyze';
+
 function loadMoodData() {
-    const data = localStorage.getItem('moodData');
-    return data ? JSON.parse(data) : {};
+    try {
+        const data = localStorage.getItem('moodData');
+        return data ? JSON.parse(data) : {};
+    } catch {
+        // localStorage 里的数据可能损坏（被手动改过、旧版本格式等），
+        // 解析失败就当作没有数据，而不是让整个页面崩溃
+        return {};
+    }
 }
 
 function saveMoodData(data) {
@@ -108,7 +119,7 @@ function renderCalendar() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    monthYear.textContent = `${year}年 ${month + 1}月`;
+    monthYear.textContent = `${year}年${month + 1}月`;
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -152,17 +163,30 @@ function renderCalendar() {
 }
 
 function openMoodModal(dateKey) {
+    // 如果上一次分析成功后的自动关闭定时器还在，先清掉，
+    // 否则用户在这 3 秒内打开另一天时，旧定时器会把新弹窗也关掉
+    if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+    }
+
     selectedDate = dateKey;
     moodModal.classList.add('active');
     moodTextInput.value = '';
     moodResult.textContent = '';
     aiReply.textContent = '';
     analyzeMoodBtn.style.display = 'block';
+    cancelMood.textContent = '取消';
     cancelMood.style.display = 'block';
+    moodTextInput.focus();
 }
 
 function closeMoodModal() {
     selectedDate = null;
+    if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = null;
+    }
     moodModal.classList.remove('active');
 }
 
@@ -174,29 +198,41 @@ analyzeMoodBtn.addEventListener('click', async () => {
         return;
     }
 
+    if (text.length > 500) {
+        alert('最多输入 500 字哦');
+        return;
+    }
+
     analyzeMoodBtn.disabled = true;
     analyzeMoodBtn.textContent = '分析中...';
     moodResult.textContent = '';
     aiReply.textContent = '';
 
     try {
-        const response = await fetch('/.netlify/functions/analyze', {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text })
         });
 
-        const data = await response.json();
+        // 后端可能返回 JSON 格式的错误（比如 429 限流），把它展示给用户
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error('服务器返回了无法解析的内容');
+        }
 
-        if (data.error) {
-            throw new Error(data.error);
+        if (!response.ok) {
+            throw new Error(data.error || '分析失败，请重试');
         }
 
         const mood = data.mood;
 
         if (mood && moodIcons[mood]) {
             moodResult.textContent = moodIcons[mood];
-            aiReply.textContent = getRandomQuote();
+            // 优先显示 AI 生成的回应；万一后端没返回 reply，再用本地语录兜底
+            aiReply.textContent = data.reply || getRandomQuote();
             analyzeMoodBtn.style.display = 'none';
             cancelMood.textContent = '点击任意处关闭';
 
@@ -204,7 +240,7 @@ analyzeMoodBtn.addEventListener('click', async () => {
             moodData[selectedDate] = mood;
             saveMoodData(moodData);
 
-            setTimeout(() => {
+            closeTimer = setTimeout(() => {
                 closeMoodModal();
                 renderCalendar();
                 renderChart();
@@ -213,13 +249,17 @@ analyzeMoodBtn.addEventListener('click', async () => {
             throw new Error('无效的情绪数据');
         }
     } catch (err) {
-        alert('分析失败，请重试');
+        alert(err.message || '分析失败，请重试');
         analyzeMoodBtn.disabled = false;
         analyzeMoodBtn.textContent = '🤖 让AI分析情绪';
     }
 });
 
 cancelMood.addEventListener('click', closeMoodModal);
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMoodModal();
+});
 
 moodModal.addEventListener('click', (e) => {
     if (e.target === moodModal) closeMoodModal();
