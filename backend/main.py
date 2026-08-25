@@ -18,12 +18,47 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-load_dotenv()  # 读取项目根目录 .env 文件里的 DEEPSEEK_API_KEY
+load_dotenv()  # 读取项目根目录 .env 文件里的环境变量
 
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
-MODEL_NAME = "deepseek-chat"
+# ---- 多模型配置表 ----
+# DeepSeek / 通义千问 / 豆包都兼容 OpenAI 的 Chat Completions 接口格式，
+# 只需要维护"地址 / 密钥环境变量名 / 默认模型名"，靠环境变量切换服务商。
+PROVIDERS = {
+    "deepseek": {
+        "url": "https://api.deepseek.com/v1/chat/completions",
+        "key_env": "DEEPSEEK_API_KEY",
+        "default_model": "deepseek-chat",
+    },
+    "qwen": {
+        "url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "key_env": "DASHSCOPE_API_KEY",
+        "default_model": "qwen-plus",
+    },
+    "doubao": {
+        "url": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+        "key_env": "ARK_API_KEY",
+        "default_model": "doubao-seed-1-6-250615",
+    },
+}
 MAX_TEXT_LENGTH = 500
+
+
+def get_model_config() -> dict:
+    """根据环境变量选择当前模型服务商，返回配置或错误信息。"""
+    provider = os.getenv("MODEL_PROVIDER", "deepseek").lower()
+    p = PROVIDERS.get(provider)
+    if p is None:
+        return {"error": f"未知的 MODEL_PROVIDER: {provider}（可选 deepseek / qwen / doubao）"}
+    api_key = os.getenv(p["key_env"])
+    if not api_key:
+        return {"error": f"当前模型 {provider} 缺少环境变量 {p['key_env']}"}
+    return {
+        "provider": provider,
+        "url": p["url"],
+        "api_key": api_key,
+        "model": os.getenv("MODEL_NAME") or p["default_model"],
+        "json_mode": os.getenv("MODEL_JSON_MODE", "1") != "0",
+    }
 
 SYSTEM_PROMPT = """你是一个温暖的心理陪伴助手。
 用户会用一句话描述自己的心情，你需要：
@@ -44,6 +79,7 @@ class MoodRequest(BaseModel):
 class MoodResponse(BaseModel):
     mood: str
     reply: str
+    model: Optional[str] = None
 
 
 def parse_mood_response(content: str) -> Optional[dict]:
@@ -83,28 +119,30 @@ async def analyze(request: MoodRequest):
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="请输入内容")
 
-    if not DEEPSEEK_API_KEY:
-        raise HTTPException(status_code=500, detail="服务端未配置 DEEPSEEK_API_KEY")
+    cfg = get_model_config()
+    if cfg.get("error"):
+        raise HTTPException(status_code=500, detail=cfg["error"])
 
     payload = {
-        "model": MODEL_NAME,
+        "model": cfg["model"],
         "temperature": 0,
         "max_tokens": 120,
-        "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f'用户说："{request.text}"'},
         ],
     }
+    if cfg["json_mode"]:
+        payload["response_format"] = {"type": "json_object"}
 
     async with httpx.AsyncClient(timeout=30) as client:
         # 上游 429（限流）或 5xx（服务器错误）时自动重试，最多 3 次，等待时间翻倍
         response = None
         for attempt in range(3):
             response = await client.post(
-                DEEPSEEK_URL,
+                cfg["url"],
                 json=payload,
-                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+                headers={"Authorization": f"Bearer {cfg['api_key']}"},
             )
             retryable = response.status_code == 429 or response.status_code >= 500
             if not retryable or attempt == 2:
@@ -120,4 +158,4 @@ async def analyze(request: MoodRequest):
     if result is None:
         raise HTTPException(status_code=502, detail="AI 返回格式不正确")
 
-    return MoodResponse(**result)
+    return MoodResponse(**result, model=cfg["model"])

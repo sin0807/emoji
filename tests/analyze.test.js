@@ -95,3 +95,45 @@ test('同一 IP 请求过快返回 429', async () => {
   const res = await callHandler({ text: '第11次' }, '10.0.0.9');
   assert.strictEqual(res.statusCode, 429);
 });
+
+// ---------- 多模型切换测试 ----------
+
+test('默认使用 DeepSeek 端点', async () => {
+  let capturedUrl = '';
+  global.fetch = async (url) => {
+    capturedUrl = url;
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: '{"mood":"happy","reply":"好的！"}' } }] }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  };
+  await callHandler({ text: '测试' }, '10.0.0.6');
+  assert.ok(capturedUrl.includes('deepseek.com'));
+});
+
+test('切换为通义千问时调用 DashScope 端点', async () => {
+  process.env.MODEL_PROVIDER = 'qwen';
+  process.env.DASHSCOPE_API_KEY = 'test-qwen';
+  let capturedUrl = '';
+  global.fetch = async (url) => {
+    capturedUrl = url;
+    return new Response(
+      JSON.stringify({ choices: [{ message: { content: '{"mood":"normal","reply":"嗯"}' } }] }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  };
+  const res = await callHandler({ text: '测试' }, '10.0.0.7');
+  assert.strictEqual(res.statusCode, 200);
+  assert.ok(capturedUrl.includes('dashscope'));
+  assert.ok(JSON.parse(res.body).model.startsWith('qwen'));
+  delete process.env.MODEL_PROVIDER;
+  delete process.env.DASHSCOPE_API_KEY;
+});
+
+test('选择豆包但没配密钥时返回 500', async () => {
+  process.env.MODEL_PROVIDER = 'doubao';
+  delete process.env.ARK_API_KEY;
+  const res = await callHandler({ text: '测试' }, '10.0.0.8');
+  assert.strictEqual(res.statusCode, 500);
+  delete process.env.MODEL_PROVIDER;
+});

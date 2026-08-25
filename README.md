@@ -10,6 +10,7 @@
 
 - 📅 **日历视图**：直观展示每日情绪状态，支持月份切换
 - 🤖 **AI 情绪分析**：输入一句话，AI 识别情绪（开心 / 普通 / 难过）并生成温暖的个性化回复
+- 🔀 **多模型切换**：同一接口支持 DeepSeek / 通义千问 / 豆包，改一个环境变量即可切换
 - 📊 **数据可视化**：每月情绪统计图表（Chart.js），清晰看见情绪趋势
 - 💬 **语录推荐**：根据情绪状态推送名人名言
 - 📱 **响应式设计**：支持移动端访问
@@ -31,7 +32,7 @@
 | Netlify | Serverless Function（`netlify/functions/analyze.js`） |
 | Vercel | Serverless Function（`api/analyze.js`） |
 | 本地开发 | FastAPI（`backend/main.py`） |
-| AI 模型 | DeepSeek Chat API（`deepseek-chat`） |
+| AI 模型 | DeepSeek / 通义千问 / 豆包（统一接口，环境变量切换） |
 | 工程化 | GitHub Actions 自动测试（push 时跑 `npm test`） |
 
 ## 架构
@@ -43,7 +44,7 @@
 Serverless 函数（Netlify 或 Vercel，持有 DEEPSEEK_API_KEY）
    │  转发请求
    ▼
-DeepSeek Chat API
+大模型 API（DeepSeek / 通义千问 / 豆包，环境变量切换）
 ```
 
 为什么中间要有一层 Serverless 函数？
@@ -86,14 +87,30 @@ DeepSeek Chat API
 
 ### 1. 环境变量
 
-所有部署方式都需要一个 DeepSeek API Key：
+项目支持三家大模型服务商，默认使用 DeepSeek，只需要配置当前使用的那一家：
 
-1. 到 [platform.deepseek.com](https://platform.deepseek.com) 注册并创建 Key
-2. 在部署平台的环境变量设置（或本地 `.env` 文件）中配置：
+1. **DeepSeek**（默认）：到 [platform.deepseek.com](https://platform.deepseek.com) 创建 Key，配置 `DEEPSEEK_API_KEY`
+2. **通义千问**：到 [阿里云百炼](https://bailian.console.aliyun.com) 创建 DashScope Key，配置 `DASHSCOPE_API_KEY`
+3. **豆包**：到 [火山方舟](https://console.volcengine.com/ark) 创建 API Key，配置 `ARK_API_KEY`
+
+在部署平台的环境变量设置（或本地 `.env` 文件）中配置：
 
 ```
+# 当前使用的服务商：deepseek（默认）/ qwen / doubao
+MODEL_PROVIDER=deepseek
 DEEPSEEK_API_KEY=sk-xxxx
+
+# 切换为通义千问时：
+# MODEL_PROVIDER=qwen
+# DASHSCOPE_API_KEY=sk-qwen-key
+
+# 切换为豆包时（建议同时设置 MODEL_NAME 为你的模型名或接入点 ID）：
+# MODEL_PROVIDER=doubao
+# ARK_API_KEY=ark-key
+# MODEL_NAME=doubao-xxx
 ```
+
+前端代码不需要任何改动：`POST /api/analyze` 的请求格式不变，切换服务商只改服务器端环境变量。回复里会带上当前使用的模型名，方便验证切换是否生效。
 
 ### 2. 本地运行（前端 + Netlify 函数）
 
@@ -144,7 +161,8 @@ npm test
 - API Key 只存在于服务端环境变量，前端永远接触不到
 - 提示词注入防护：指令放在 system 消息，用户输入单独放在 user 消息
 - 输入长度限制（500 字）与基础频率限制，防止滥用消耗额度
-- 结构化输出：请求 DeepSeek 时启用 JSON 模式，让模型保证返回合法 JSON，并对瞬时上游错误自动重试
+- 结构化输出：请求模型时启用 JSON 模式，让模型保证返回合法 JSON，并对瞬时上游错误自动重试
+- 多模型统一层：DeepSeek / 通义千问 / 豆包共用一套接口，各家密钥独立存放在服务端环境变量
 - 上游模型报错只记录日志，不向前端泄露原始内容
 
 ## 适用场景

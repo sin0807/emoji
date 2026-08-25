@@ -5,6 +5,49 @@ const MAX_TEXT_LENGTH = 500;
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
+// ---- 多模型配置表 ----
+// DeepSeek / 通义千问 / 豆包都兼容 OpenAI 的 Chat Completions 接口格式，
+// 只需要维护"地址 / 密钥环境变量名 / 默认模型名"，靠环境变量切换服务商。
+const PROVIDERS = {
+  deepseek: {
+    url: 'https://api.deepseek.com/v1/chat/completions',
+    keyEnv: 'DEEPSEEK_API_KEY',
+    defaultModel: 'deepseek-chat'
+  },
+  qwen: {
+    url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    keyEnv: 'DASHSCOPE_API_KEY',
+    defaultModel: 'qwen-plus'
+  },
+  doubao: {
+    url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+    keyEnv: 'ARK_API_KEY',
+    defaultModel: 'doubao-seed-1-6-250615'
+  }
+};
+
+// MODEL_PROVIDER: deepseek（默认）/ qwen / doubao
+// MODEL_NAME: 可选，覆盖默认模型名（豆包建议填模型名或接入点 ID ep-xxx）
+// MODEL_JSON_MODE: 默认开启，设成 0 可关闭 JSON 模式
+function getModelConfig() {
+  const provider = (process.env.MODEL_PROVIDER || 'deepseek').toLowerCase();
+  const p = PROVIDERS[provider];
+  if (!p) {
+    return { error: `未知的 MODEL_PROVIDER: ${provider}（可选 deepseek / qwen / doubao）` };
+  }
+  const apiKey = process.env[p.keyEnv];
+  if (!apiKey) {
+    return { error: `当前模型 ${provider} 缺少环境变量 ${p.keyEnv}` };
+  }
+  return {
+    provider,
+    url: p.url,
+    apiKey,
+    model: process.env.MODEL_NAME || p.defaultModel,
+    jsonMode: process.env.MODEL_JSON_MODE !== '0'
+  };
+}
+
 const ipHits = new Map();
 
 const SYSTEM_PROMPT = `你是一个温暖的心理陪伴助手。
@@ -90,10 +133,10 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-  if (!DEEPSEEK_API_KEY) {
-    console.error('Missing DEEPSEEK_API_KEY env');
-    res.status(500).json({ error: '服务端未配置 DEEPSEEK_API_KEY' });
+  const cfg = getModelConfig();
+  if (cfg.error) {
+    console.error(cfg.error);
+    res.status(500).json({ error: cfg.error });
     return;
   }
 
@@ -117,28 +160,32 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const payload = {
+    model: cfg.model,
+    temperature: 0,
+    max_tokens: 120,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `用户说："${text}"` }
+    ]
+  };
+  if (cfg.jsonMode) {
+    payload.response_format = { type: 'json_object' };
+  }
+
   try {
-    const response = await fetchWithRetry('https://api.deepseek.com/v1/chat/completions', {
+    const response = await fetchWithRetry(cfg.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        'Authorization': `Bearer ${cfg.apiKey}`
       },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        response_format: { type: 'json_object' }, // 让模型保证输出合法 JSON
-        temperature: 0,
-        max_tokens: 120,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `用户说："${text}"` }
-        ]
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`DeepSeek API error: ${response.status}`, errText);
+      console.error(`AI API error: ${response.status}`, errText);
       res.status(502).json({ error: 'AI 服务暂时不可用' });
       return;
     }
@@ -157,7 +204,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    res.status(200).json({ mood: result.mood, reply: result.reply });
+    res.status(200).json({ mood: result.mood, reply: result.reply, model: cfg.model });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: '服务器内部错误' });

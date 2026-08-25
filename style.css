@@ -199,3 +199,11 @@ body {
     cursor: pointer;
     font-size: 16px;
 }
+
+/* 显示当前使用的模型名（多模型切换的可见证据） */
+#modelLabel {
+    font-size: 12px;
+    color: #aaa;
+    margin: 4px 0 10px;
+    min-height: 14px;
+}

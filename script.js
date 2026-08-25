@@ -40,6 +40,7 @@ const analyzeMoodBtn = document.getElementById('analyzeMoodBtn');
 const moodTextInput = document.getElementById('moodTextInput');
 const moodResult = document.getElementById('moodResult');
 const aiReply = document.getElementById('aiReply');
+const modelLabel = document.getElementById('modelLabel');
 const chartTitle = document.getElementById('chartTitle');
 
 let currentDate = new Date();
@@ -182,6 +183,7 @@ function openMoodModal(dateKey) {
     moodTextInput.value = '';
     moodResult.textContent = '';
     aiReply.textContent = '';
+    modelLabel.textContent = '';
     analyzeMoodBtn.style.display = 'block';
     cancelMood.textContent = '取消';
     cancelMood.style.display = 'block';
@@ -240,6 +242,8 @@ analyzeMoodBtn.addEventListener('click', async () => {
             moodResult.textContent = moodIcons[mood];
             // 优先显示 AI 生成的回应；万一后端没返回 reply，再用本地语录兜底
             aiReply.textContent = data.reply || getRandomQuote(mood);
+            // 显示当前使用的模型名，切换模型时这里会跟着变（多模型切换的可见证据）
+            modelLabel.textContent = data.model ? `模型：${data.model}` : '';
             analyzeMoodBtn.style.display = 'none';
             cancelMood.textContent = '点击任意处关闭';
 
