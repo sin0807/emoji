@@ -16,3 +16,6 @@ dist/
 # ç¼–è¾‘å™¨
 .vscode/
 .idea/
+
+# Î¢ĞÅ¿ª·¢Õß¹¤¾ßË½ÈËÅäÖÃ
+project.private.config.json

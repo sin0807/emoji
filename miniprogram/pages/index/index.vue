@@ -35,12 +35,16 @@
 
     <!-- 月度统计：用 CSS 柱状图，不引入图表库 -->
     <view class="chart-section">
+		
       <text class="chart-title">{{ monthYear }}情绪统计</text>
       <view class="bar-row">
         <text class="bar-label">😊 开心</text>
         <view class="bar-track">
           <view class="bar" :style="{ width: barPercent(monthStats.happy) }"></view>
         </view>
+		<view class="footer">
+		  <text>总共记录了 {{ totalRecords }} 条心情</text>
+		</view>
         <text class="bar-num">{{ monthStats.happy }}</text>
       </view>
       <view class="bar-row">
@@ -76,7 +80,7 @@
         <text v-if="moodResult" class="mood-result">{{ moodResult }}</text>
         <text v-if="aiReply" class="ai-reply">{{ aiReply }}</text>
         <text v-if="modelName" class="model-name">{{ modelName }}</text>
-        <button class="cancel-btn" @tap="closeModal">取消</button>
+        <button class="cancel-btn" @tap="closeModal">关闭</button>
       </view>
     </view>
   </view>
@@ -143,10 +147,12 @@ function saveData() {
 }
 
 // ---------- 计算属性 ----------
-const monthYear = computed(
-  () => `${currentDate.value.getFullYear()}年${currentDate.value.getMonth() + 1}月`
-);
-
+const monthYear = computed(() => {
+  const y = currentDate.value.getFullYear();
+  const m = currentDate.value.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  return `${y}年${m + 1}月（共${daysInMonth}天）`;
+});
 // 日历格子：月初前面补空位，每天一格
 const cells = computed(() => {
   const y = currentDate.value.getFullYear();
@@ -179,6 +185,9 @@ const monthStats = computed(() => {
   }
   return counts;
 });
+// 总记录数：moodData 有几个日期 key，就是几条记录
+const totalRecords = computed(() => Object.keys(moodData.value).length);
+
 
 function barPercent(count) {
   const max = Math.max(monthStats.value.happy, monthStats.value.normal, monthStats.value.sad, 1);
